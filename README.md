@@ -7,4 +7,5 @@ You have to install Segment-Anything first to use this software. see https://git
 PySide6 is also required to construct the GUI.
 
 ![image](https://github.com/user-attachments/assets/37196eac-e737-4bfc-a121-7555b29c9084)
-![image](https://github.com/user-attachments/assets/07a6df24-7e16-437e-a6e1-5e15b3aef4bd)
+![image](https://github.com/user-attachments/assets/c8ed1b6c-d161-49cf-840f-3ede8922a08e)
+
