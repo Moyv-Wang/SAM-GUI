@@ -9,7 +9,7 @@ This tool allows user extract mask for the target by adding point prompt.
 
 - SAM
 
-  see https://github.com/facebookresearch/segment-anything, Follow its instruction to install SAM
+  See https://github.com/facebookresearch/segment-anything, Follow its instruction to install SAM
 
 - PySide6
 
