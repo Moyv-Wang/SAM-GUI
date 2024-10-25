@@ -6,7 +6,8 @@ import cv2
 import os
 import numpy as np
 
-from SAM import segment, extract_embedding
+# from SAM import segment, extract_embedding
+from SAM_NEW import segment
 from extract_worker import ExtractWorker
 from modal_window import ModalDialog
 
@@ -144,7 +145,9 @@ class MyWindow(QWidget):
             # self.drawPrompt(self.pointPromptsForDraw)
             # count the time consuming
             seg_start = cv2.getTickCount()
-            self.masks = segment(self.image_path, self.pointPromptsForSeg, self.promptsLabels, self.predictor)
+
+            # self.masks = segment(self.image_path, self.pointPromptsForSeg, self.promptsLabels, self.predictor)
+            self.masks = segment(self.pointPromptsForSeg, self.promptsLabels, self.predictor)
             seg_end = cv2.getTickCount()
             print(f"segmenting time: {(seg_end - seg_start) / cv2.getTickFrequency()}s")
             self.allPreviousMasks.append(self.masks[0])

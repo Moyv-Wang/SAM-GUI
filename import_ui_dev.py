@@ -6,7 +6,9 @@ import cv2
 import os
 import numpy as np
 
-from SAM import segment, extract_embedding
+# from SAM import segment, extract_embedding
+from SAM_NEW import segment
+from extract_worker import ExtractWorker
 from modal_window import ModalDialog
 
 class MyWindow(QWidget):
@@ -82,8 +84,26 @@ class MyWindow(QWidget):
             os.makedirs(self.outputDirectory, exist_ok=True)
         self.dialog = ModalDialog(self)
         self.dialog.show()
-        self.predictor = extract_embedding(self.image_path)
-        self.dialog.close()
+        # 开启异步操作进行 embedding 提取
+        self.start_embedding_extraction()
+        # self.predictor = extract_embedding(self.image_path)
+        # self.dialog.close()
+    
+    def start_embedding_extraction(self):
+        self.thread = QThread()  # 创建线程
+        self.worker = ExtractWorker(self.image_path)  # 创建工作线程类的实例
+        self.worker.moveToThread(self.thread)  # 将工作类移动到新线程
+        self.thread.started.connect(self.worker.run)  # 启动线程时，调用工作类的 run 方法
+        self.worker.finished.connect(self.on_extraction_complete)  # 提取完成后，调用回调函数
+        self.worker.finished.connect(self.thread.quit)  # 提取完成后，退出线程
+        self.worker.finished.connect(self.worker.deleteLater)  # 完成后销毁工作类
+        self.thread.finished.connect(self.thread.deleteLater)  # 线程结束时销毁线程
+        self.thread.start()
+    
+    def on_extraction_complete(self, predictor):
+        self.predictor = predictor
+        self.dialog.close()  # 关闭模态对话框
+
     def addRadioFunc(self):
         self.pointFlag = 1
     
@@ -123,50 +143,37 @@ class MyWindow(QWidget):
             self.pointPromptsForDraw.append([x_draw, y_draw])
             self.promptsLabels.append(self.pointFlag)
             # self.drawPrompt(self.pointPromptsForDraw)
-            self.masks = segment(self.image_path, self.pointPromptsForSeg, self.promptsLabels, self.predictor)
+            # count the time consuming
+            seg_start = cv2.getTickCount()
+
+            # self.masks = segment(self.image_path, self.pointPromptsForSeg, self.promptsLabels, self.predictor)
+            self.masks = segment(self.pointPromptsForSeg, self.promptsLabels, self.predictor)
+            seg_end = cv2.getTickCount()
+            print(f"segmenting time: {(seg_end - seg_start) / cv2.getTickFrequency()}s")
             self.allPreviousMasks.append(self.masks[0])
+            show_start = cv2.getTickCount()
             self.show_mask_on_pixmap(self.masks[0], self.scale_factor)
+            show_end = cv2.getTickCount()
+            print(f"showing time: {(show_end - show_start) / cv2.getTickFrequency()}s")
         if(event.button() == Qt.RightButton):
             self.write_masks_to_folder()
-            
-    # def drawPrompt(self, pointList, size=3):
-    #     # 获取当前的 QPixmap
-    #     # pixmap = self.Originalpixmap.copy()
-    #     pixmap = self.pixmap.copy()
-
-    #     # 创建 QPainter 在 Pixmap 上绘制
-    #     painter = QPainter(pixmap)
-    #     pen = QPen(QColor("red"))  # 设置画笔颜色为红色
-    #     pen.setWidth(1)
-    #     painter.setPen(pen)
-    #     painter.setBrush(QColor("yellow"))  # 设置填充颜色为黄色
-    #     for point in pointList:
-    #         x, y = point
-    #         painter.drawEllipse(QPoint(int(x), int(y)), size, size)
-    #     painter.end()
-    #     self.ui.imageLabel.setPixmap(pixmap)
 
     def show_mask_on_pixmap(self, mask, scale_factor=1, size=3):
-        # 创建一个 QImage 来表示掩码
-        mask_image = QImage(mask.shape[1], mask.shape[0], QImage.Format_ARGB32)
-        mask_image.fill(Qt.transparent)
-
-        # 遍历掩码，将 mask == 1 的位置填充为红色
-        for y in range(mask.shape[0]):
-            for x in range(mask.shape[1]):
-                if mask[y, x] == 1:
-                    mask_image.setPixel(x, y, QColor(50, 180, 170, 100).rgba())
-        
-        # 将掩码图像按比例缩放到与 QLabel 中的缩放图片相匹配
-        mask_image = mask_image.scaled(int(mask_image.width() * scale_factor), int(mask_image.height() * scale_factor), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        height, width = mask.shape
+        mask_image_np = np.zeros((height, width, 4), dtype=np.uint8)  # 使用 4 通道 (RGBA)
+        mask_image_np[mask == 1] = [50, 180, 170, 100]  # 只填充 mask 为 1 的像素
+        mask_image = QImage(mask_image_np.data, width, height, QImage.Format_ARGB32)
+        mask_image = mask_image.scaled(int(mask_image.width() * scale_factor), 
+                                    int(mask_image.height() * scale_factor), 
+                                    Qt.KeepAspectRatio, 
+                                    Qt.SmoothTransformation)
 
         # 将原始 pixmap 拷贝一份用于绘制
         pixmap_with_mask = self.pixmap.copy()
-
-        # 使用 QPainter 在原始 pixmap 上绘制掩码
         painter = QPainter(pixmap_with_mask)
         painter.drawImage(0, 0, mask_image)
 
+        # 绘制提示点
         pen = QPen(QColor("red"))  # 设置画笔颜色为红色
         pen.setWidth(1)
         painter.setPen(pen)

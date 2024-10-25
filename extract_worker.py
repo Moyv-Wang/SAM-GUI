@@ -1,5 +1,6 @@
 from PySide6.QtCore import QObject, Signal
-from SAM import extract_embedding 
+# from SAM import extract_embedding 
+from SAM_NEW import extract_embedding 
 
 class ExtractWorker(QObject):
     finished = Signal(object)  # 定义一个信号，用于传递结果（例如 predictor）
