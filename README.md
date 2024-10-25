@@ -11,7 +11,7 @@ This tool allows user extract mask for the target by adding point prompt.
   
   Now, we have migrate from SAM to SAM2.
   
-  See [https://github.com/facebookresearch/segment-anything](https://github.com/facebookresearch/sam2), Follow its instruction to install SAM
+  See [https://github.com/facebookresearch/segment-anything](https://github.com/facebookresearch/sam2), Follow its instruction to install SAM2
 
 - PySide6
 
